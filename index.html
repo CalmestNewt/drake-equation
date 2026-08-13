@@ -525,6 +525,21 @@
     .equation { position: static; }
   }
 
+  /* Finger-sized hit areas. Keyed to the input device rather than the
+     viewport -- a tablet in portrait is ~768px wide and still entirely
+     touch-driven. Phone widths stay in the condition as a fallback in case
+     a browser misreports its pointer type.
+     The visible track stays 3px and centred; only the input's box grows. */
+  @media (pointer: coarse), (max-width: 640px) {
+    input[type="range"] { height: 36px; }
+    input[type="range"]::-webkit-slider-runnable-track { height: 36px; }
+    input[type="range"]::-moz-range-track { height: 36px; }
+    input[type="range"]::-webkit-slider-thumb { width: 9px; height: 28px; }
+    input[type="range"]::-moz-range-thumb { width: 9px; height: 28px; }
+    .f-val input { min-height: 36px; }
+    .chip { min-height: 38px; padding: .5rem .8rem; }
+  }
+
   /* The seven terms need ~500px and the result ~180px. Below roughly their
      sum the two cannot share a line without the terms being clipped, so the
      result drops to its own row -- well before the phone breakpoint. */
@@ -557,16 +572,6 @@
     }
     .crow-label { font-size: .75rem; }
     .crow-val { font-size: .6875rem; }
-
-    /* Finger-sized hit areas. The visible track stays 3px and centred;
-       only the input's own box grows. */
-    input[type="range"] { height: 36px; }
-    input[type="range"]::-webkit-slider-runnable-track { height: 36px; }
-    input[type="range"]::-moz-range-track { height: 36px; }
-    input[type="range"]::-webkit-slider-thumb { width: 9px; height: 28px; }
-    input[type="range"]::-moz-range-thumb { width: 9px; height: 28px; }
-    .f-val input { min-height: 36px; }
-    .chip { min-height: 38px; padding: .5rem .8rem; }
 
     .factor {
       grid-template-columns: 2.6rem 1fr;
