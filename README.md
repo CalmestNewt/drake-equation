@@ -4,6 +4,8 @@ An interactive calculator for the Drake equation, built as a single self-contain
 
 **Live: [calmestnewt.github.io/drake-equation](https://calmestnewt.github.io/drake-equation/)**
 
+![The calculator, showing the seven terms and the resulting estimate of 12,000 civilizations](docs/screenshot.png)
+
 ```
 N = R∗ · f_p · n_e · f_l · f_i · f_c · L
 ```
@@ -30,6 +32,11 @@ repo root via GitHub Pages, so every push to `main` redeploys the live site.
   including scientific notation (`1e-5`).
 - **A cascade chart** showing the running product after each term on a logarithmic
   axis — which makes it visible that a single assumption usually dominates the result.
+  Below, the "Optimistic" preset in dark theme: six terms hold the total near 1, and
+  `L` alone carries it to 2.7 million.
+
+  ![The cascade chart in dark theme](docs/cascade-dark.png)
+
 - **Consequence readouts**: N, the mean distance to the nearest civilization, and the
   round-trip time for a signal.
 - **Four presets** spanning about ten orders of magnitude, each with a short note on
