@@ -1,0 +1,1015 @@
+<title>The Drake Equation &#x2014; a working calculator</title>
+
+<style>
+  /* -- Tokens ---------------------------------------------
+     Light is the base. Dark redefines tokens only, twice:
+     once for the un-stamped system-dark case, once for the
+     explicit [data-theme="dark"] stamp.                      */
+  :root {
+    --paper:   #E9ECE7;
+    --panel:   #F7F9F6;
+    --panel-2: #E2E7E1;
+    --ink:     #121A19;
+    --ink-2:   #55635F;
+    --ink-3:   #7C8A85;
+    --rule:    #CBD2CB;
+    --rule-2:  #DDE2DC;
+    --signal:  #0A6C67;
+    --signal-soft: #0a6c6722;
+    --flare:   #A9451A;
+    --shadow:  0 1px 2px rgba(18,26,25,.06), 0 8px 24px -16px rgba(18,26,25,.28);
+
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper:   #0C110F;
+      --panel:   #141B19;
+      --panel-2: #1B2422;
+      --ink:     #E3E9E5;
+      --ink-2:   #93A29D;
+      --ink-3:   #6E7C78;
+      --rule:    #26312E;
+      --rule-2:  #1E2724;
+      --signal:  #4FD3C0;
+      --signal-soft: #4fd3c022;
+      --flare:   #F08A52;
+      --shadow:  0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.9);
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper:   #0C110F;
+    --panel:   #141B19;
+    --panel-2: #1B2422;
+    --ink:     #E3E9E5;
+    --ink-2:   #93A29D;
+    --ink-3:   #6E7C78;
+    --rule:    #26312E;
+    --rule-2:  #1E2724;
+    --signal:  #4FD3C0;
+    --signal-soft: #4fd3c022;
+    --flare:   #F08A52;
+    --shadow:  0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.9);
+  }
+
+  /* -- Base ----------------------------------------------- */
+  * { box-sizing: border-box; }
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    margin: 0;
+  }
+  .wrap {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: clamp(2rem, 5vw, 4.5rem) clamp(1rem, 4vw, 2.5rem) 4rem;
+    display: flex;
+    flex-direction: column;
+    gap: clamp(2.25rem, 4vw, 3.5rem);
+  }
+  h1, h2, h3 { text-wrap: balance; margin: 0; }
+  p { margin: 0; }
+
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: .6875rem;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+
+  /* -- Masthead ------------------------------------------- */
+  .masthead { display: flex; flex-direction: column; gap: .85rem; }
+  .masthead h1 {
+    font-size: clamp(2.1rem, 6vw, 3.35rem);
+    line-height: 1.03;
+    letter-spacing: -.03em;
+    font-weight: 600;
+  }
+  .masthead h1 em {
+    font-style: normal;
+    color: var(--signal);
+  }
+  .lede {
+    max-width: 62ch;
+    color: var(--ink-2);
+    font-size: 1.0625rem;
+  }
+  .lede strong { color: var(--ink); font-weight: 600; }
+
+  /* -- Hero: the equation, live --------------------------- */
+  .equation {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: var(--panel);
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    box-shadow: var(--shadow);
+    padding: 1.4rem 1.5rem 1.15rem;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    gap: .55rem;
+    transition: padding .18s ease, box-shadow .18s ease, border-radius .18s ease;
+  }
+  /* Locked to the top edge: shed the rounding, tighten up, cast a lip. */
+  .equation.stuck {
+    border-top-color: transparent;
+    border-radius: 0 0 3px 3px;
+    padding: .75rem 1.5rem .7rem;
+    box-shadow: 0 8px 18px -14px rgba(0, 0, 0, .55);
+  }
+  /* Only the terms scroll; the result sits outside the scroller so the
+     answer can never be the part that scrolls out of view. */
+  .eq-scroll { overflow-x: auto; min-width: 0; }
+  .term .glyph, .result .glyph { transition: font-size .18s ease; }
+  .equation.stuck .term .glyph { font-size: 1.2rem; }
+  .equation.stuck .result .glyph { font-size: 1.45rem; }
+  .eq-inner {
+    display: flex;
+    align-items: flex-start;
+    gap: .55rem;
+    min-width: max-content;
+  }
+  .term {
+    appearance: none;
+    background: none;
+    border: 0;
+    border-radius: 2px;
+    padding: .35rem .4rem;
+    cursor: pointer;
+    font: inherit;
+    color: inherit;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: .3rem;
+    transition: background .15s ease;
+  }
+  .term:hover { background: var(--signal-soft); }
+  .term .glyph {
+    font-family: var(--mono);
+    font-size: 1.5rem;
+    line-height: 1;
+    letter-spacing: -.02em;
+  }
+  .term .glyph sub {
+    font-size: .55em;
+    color: var(--ink-2);
+    letter-spacing: 0;
+  }
+  .term .num {
+    font-family: var(--mono);
+    font-size: .75rem;
+    color: var(--signal);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .op {
+    font-family: var(--mono);
+    font-size: 1.05rem;
+    color: var(--ink-3);
+    padding-top: .55rem;
+  }
+  .op.eq { color: var(--ink-2); font-size: 1.35rem; padding-top: .42rem; }
+  .result {
+    flex: none;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: .3rem;
+    padding: .35rem .4rem;
+  }
+  .result .glyph {
+    font-family: var(--mono);
+    font-size: 1.9rem;
+    line-height: 1;
+    color: var(--flare);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .result .num {
+    font-family: var(--mono);
+    font-size: .6875rem;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+  @keyframes pulse { from { color: var(--flare); } to { color: var(--signal); } }
+  .term .num.pulse { animation: pulse .5s ease-out; }
+  @media (prefers-reduced-motion: reduce) {
+    .term .num.pulse, #stance.swap { animation: none; }
+    .equation, .term .glyph, .result .glyph { transition: none; }
+    * { scroll-behavior: auto !important; }
+  }
+
+  /* -- Section scaffolding -------------------------------- */
+  .section { display: flex; flex-direction: column; gap: 1.25rem; }
+  .section-head { display: flex; flex-direction: column; gap: .3rem; }
+  .section-head h2 {
+    font-size: 1.0625rem;
+    font-weight: 600;
+    letter-spacing: -.01em;
+  }
+  .section-head p { color: var(--ink-2); font-size: .9375rem; max-width: 60ch; }
+  /* Reserve most of the tallest blurb's height so swapping stance
+     doesn't shove the controls up and down the page. */
+  #stance { min-height: 6.2em; }
+  #stance strong { color: var(--ink); font-weight: 600; }
+  #stance sub { font-size: .72em; }
+  @keyframes swap { from { opacity: .25; } to { opacity: 1; } }
+  #stance.swap { animation: swap .22s ease-out; }
+
+  /* -- Presets -------------------------------------------- */
+  .presets { display: flex; flex-wrap: wrap; gap: .5rem; }
+  .chip {
+    font-family: var(--mono);
+    font-size: .75rem;
+    letter-spacing: .04em;
+    padding: .42rem .7rem;
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    background: var(--panel);
+    color: var(--ink-2);
+    cursor: pointer;
+    transition: border-color .15s ease, color .15s ease, background .15s ease;
+  }
+  .chip:hover { color: var(--ink); border-color: var(--ink-3); }
+  .chip[aria-pressed="true"] {
+    background: var(--signal);
+    border-color: var(--signal);
+    color: var(--panel);
+  }
+
+  /* -- Factor controls ------------------------------------ */
+  .factors {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    background: var(--panel);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+  .factor {
+    display: grid;
+    grid-template-columns: 3.4rem 1fr 9rem;
+    gap: .55rem 1.1rem;
+    align-items: baseline;
+    padding: 1.05rem 1.25rem 1.15rem;
+    border-top: 1px solid var(--rule-2);
+    scroll-margin-top: 8.5rem; /* clears the sticky equation */
+  }
+  .factor:first-child { border-top: 0; }
+  .factor:target, .factor.lit { background: var(--panel-2); }
+  .f-sym {
+    font-family: var(--mono);
+    font-size: 1.2rem;
+    color: var(--ink);
+    letter-spacing: -.02em;
+  }
+  .f-sym sub { font-size: .55em; color: var(--ink-2); }
+  .f-meta { display: flex; flex-direction: column; gap: .1rem; min-width: 0; }
+  .f-name {
+    font-size: .9375rem; font-weight: 600; letter-spacing: -.005em;
+    display: flex; align-items: center; gap: .5rem; flex-wrap: wrap;
+  }
+  .f-desc { font-size: .8125rem; color: var(--ink-2); line-height: 1.45; }
+  .f-src {
+    font-family: var(--mono);
+    font-size: .6875rem;
+    line-height: 1.5;
+    color: var(--ink-3);
+    margin-top: .2rem;
+  }
+  .badge {
+    font-family: var(--mono);
+    font-size: .5625rem;
+    font-weight: 400;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    padding: .16rem .38rem;
+    border-radius: 2px;
+    border: 1px solid currentColor;
+    white-space: nowrap;
+  }
+  .badge.measured  { color: var(--signal); }
+  .badge.estimated { color: var(--ink-3); }
+  .badge.unknown   { color: var(--flare); }
+  .f-val { display: flex; align-items: baseline; gap: .35rem; justify-self: end; }
+  .f-val input {
+    width: 5.4rem;
+    font-family: var(--mono);
+    font-size: .875rem;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    padding: .28rem .4rem;
+    color: var(--ink);
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+  }
+  .f-unit {
+    font-family: var(--mono);
+    font-size: .625rem;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    white-space: nowrap;
+    width: 2.6rem;
+  }
+  /* Slider flanked by its scale endpoints, so the dial reads as a range. */
+  .f-slider {
+    grid-column: 2 / -1;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: .7rem;
+  }
+  .f-tick {
+    font-family: var(--mono);
+    font-size: .625rem;
+    line-height: 1;
+    color: var(--ink-3);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .f-tick.max { text-align: right; }
+
+  input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 20px;
+    margin: 0;
+    background-color: transparent;
+    background-image: linear-gradient(to right,
+      var(--signal) 0 calc(var(--fill, 0) * 100%),
+      var(--rule) calc(var(--fill, 0) * 100%) 100%);
+    background-size: 100% 3px;
+    background-position: center;
+    background-repeat: no-repeat;
+    cursor: ew-resize;
+  }
+  input[type="range"]::-webkit-slider-runnable-track { background: transparent; height: 20px; }
+  input[type="range"]::-moz-range-track { background: transparent; height: 20px; }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 6px; height: 19px;
+    border-radius: 1px;
+    background: var(--ink);
+    border: 0;
+  }
+  input[type="range"]::-moz-range-thumb {
+    width: 6px; height: 19px;
+    border-radius: 1px;
+    background: var(--ink);
+    border: 0;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--flare);
+    outline-offset: 2px;
+  }
+
+  /* -- Cascade chart -------------------------------------- */
+  .cascade {
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    background: var(--panel);
+    box-shadow: var(--shadow);
+    padding: 1.35rem 1.25rem 1.1rem;
+    display: flex;
+    flex-direction: column;
+    gap: .1rem;
+    overflow-x: auto;
+  }
+  .crow {
+    display: grid;
+    grid-template-columns: 4.6rem 1fr 6.4rem;
+    gap: 0 .9rem;
+    align-items: center;
+    min-width: 30rem;
+  }
+  .crow-label {
+    font-family: var(--mono);
+    font-size: .8125rem;
+    color: var(--ink-2);
+    white-space: nowrap;
+  }
+  .crow-label sub { font-size: .6em; }
+  .track {
+    position: relative;
+    height: 22px;
+  }
+  .grid-line {
+    position: absolute;
+    top: 0; bottom: 0;
+    width: 1px;
+    background: var(--rule-2);
+  }
+  .bar {
+    position: absolute;
+    top: 5px;
+    height: 12px;
+    left: 0;
+    background: var(--signal);
+    opacity: .55;
+    border-radius: 0 1px 1px 0;
+  }
+  .crow.final .bar { opacity: 1; background: var(--flare); }
+  .crow.final .crow-label, .crow.final .crow-val { color: var(--ink); font-weight: 600; }
+  .crow-val {
+    font-family: var(--mono);
+    font-size: .8125rem;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    color: var(--ink-2);
+    white-space: nowrap;
+  }
+  .axis {
+    display: grid;
+    grid-template-columns: 4.6rem 1fr 6.4rem;
+    gap: 0 .9rem;
+    min-width: 30rem;
+    margin-top: .35rem;
+    padding-top: .5rem;
+    border-top: 1px solid var(--rule);
+  }
+  .axis-scale { position: relative; height: 1.1rem; }
+  .axis-tick {
+    position: absolute;
+    top: 0;
+    font-family: var(--mono);
+    font-size: .625rem;
+    color: var(--ink-3);
+    white-space: nowrap;
+  }
+  .axis-name {
+    font-family: var(--mono);
+    font-size: .625rem;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+
+  /* -- Readouts ------------------------------------------- */
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1px;
+    background: var(--rule);
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .stat {
+    background: var(--panel);
+    padding: 1.1rem 1.2rem 1.2rem;
+    display: flex;
+    flex-direction: column;
+    gap: .35rem;
+  }
+  .stat-label {
+    font-family: var(--mono);
+    font-size: .625rem;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+  .stat-value {
+    font-family: var(--mono);
+    font-size: 1.45rem;
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -.02em;
+  }
+  .stat:first-child .stat-value { color: var(--flare); }
+  .stat-note { font-size: .8125rem; color: var(--ink-2); line-height: 1.4; }
+
+  /* -- Closing note --------------------------------------- */
+  .note {
+    border-left: 2px solid var(--signal);
+    padding: .2rem 0 .2rem 1.15rem;
+    display: flex;
+    flex-direction: column;
+    gap: .7rem;
+    max-width: 64ch;
+    color: var(--ink-2);
+    font-size: .9375rem;
+  }
+  .note strong { color: var(--ink); font-weight: 600; }
+  .colophon {
+    font-family: var(--mono);
+    font-size: .6875rem;
+    letter-spacing: .06em;
+    color: var(--ink-3);
+    border-top: 1px solid var(--rule);
+    padding-top: 1.1rem;
+  }
+
+  /* Too little vertical room to give any of it away permanently. */
+  @media (max-height: 460px) {
+    .equation { position: static; }
+  }
+
+  @media (max-width: 640px) {
+    /* Too little width to keep N on the same line without it reading as
+       another factor in the product. Drop it to its own row instead. */
+    .equation {
+      flex-direction: column;
+      align-items: stretch;
+      gap: .45rem;
+      padding: 1rem 1rem .85rem;
+    }
+    .equation.stuck { padding: .7rem 1rem .6rem; }
+    .op.eq { display: none; }
+    .result {
+      flex-direction: row;
+      align-items: baseline;
+      justify-content: center;
+      gap: .55rem;
+      padding: .6rem 0 0;
+      border-top: 1px solid var(--rule-2);
+    }
+    /* Fit all three columns rather than hiding the values off-screen. */
+    .cascade { padding: 1.1rem .85rem .9rem; }
+    .crow, .axis {
+      min-width: 0;
+      grid-template-columns: 3.2rem 1fr 4.9rem;
+      gap: 0 .55rem;
+    }
+    .crow-label { font-size: .75rem; }
+    .crow-val { font-size: .6875rem; }
+
+    /* Finger-sized hit areas. The visible track stays 3px and centred;
+       only the input's own box grows. */
+    input[type="range"] { height: 36px; }
+    input[type="range"]::-webkit-slider-runnable-track { height: 36px; }
+    input[type="range"]::-moz-range-track { height: 36px; }
+    input[type="range"]::-webkit-slider-thumb { width: 9px; height: 28px; }
+    input[type="range"]::-moz-range-thumb { width: 9px; height: 28px; }
+    .f-val input { min-height: 36px; }
+    .chip { min-height: 38px; padding: .5rem .8rem; }
+
+    .factor {
+      grid-template-columns: 2.6rem 1fr;
+    }
+    .f-val { grid-column: 2; justify-self: start; }
+    .f-slider { grid-column: 1 / -1; }
+  }
+</style>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <span class="eyebrow">Green Bank, West Virginia &#xB7; November 1961</span>
+    <h1>How many civilizations are <em>listening</em> right now?</h1>
+    <p class="lede">Frank Drake wrote his equation the week before the first SETI meeting &#x2014; not to predict an answer, but to <strong>set the agenda</strong>. Each term was a session on the schedule. Turn the seven dials and watch the estimate move across sixteen orders of magnitude.</p>
+  </header>
+
+  <div class="equation">
+    <div class="eq-scroll"><div class="eq-inner" id="eq"></div></div>
+    <div class="result" id="eq-result"></div>
+  </div>
+
+  <section class="section">
+    <div class="section-head">
+      <h2>Starting points</h2>
+      <p>Four sets of assumptions, all argued in print by serious people, disagreeing by a factor of ten billion.</p>
+      <p id="stance" aria-live="polite"></p>
+    </div>
+    <div class="presets" id="presets"></div>
+    <div class="factors" id="factors"></div>
+  </section>
+
+  <section class="section">
+    <div class="section-head">
+      <h2>The cascade</h2>
+      <p>The running product after each term, on a logarithmic axis. This is where the equation earns its keep: you can see which single assumption is doing all the work.</p>
+    </div>
+    <div class="cascade" id="cascade"></div>
+  </section>
+
+  <section class="section">
+    <div class="section-head">
+      <h2>What that would mean</h2>
+    </div>
+    <div class="stats" id="stats"></div>
+  </section>
+
+  <div class="note">
+    <p><strong>Three of the seven terms now rest on measurements.</strong> Infrared surveys fixed the star formation rate, microlensing and Kepler settled the planet count, and &#x3B7;&#x2295; has an error bar you can at least write down. The remaining four are the same open questions they were in 1961 &#x2014; and the last of them, <em>L</em>, has exactly one data point. We are it, and we are about a century in.</p>
+    <p>Which is the equation's real result. Drag <em>L</em> alone across its range and N moves by ten orders of magnitude while everything else stays put. The question "is anyone out there?" turns out to be mostly the question "does anyone last?"</p>
+  </div>
+
+  <p class="colophon">Sources: Licquia &amp; Newman 2015 (ApJ 806:96) &#xB7; Cassan et al. 2012 (Nature 481:167) &#xB7; Bryson et al. 2021 (AJ 161:36). Nearest-neighbour figures assume civilizations spread evenly through a galactic disk of radius 50,000 ly and thickness 1,000 ly.</p>
+
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  // status drives the badge: what kind of number this actually is.
+  var FACTORS = [
+    { key: "R",  sym: "R", sub: "\u2217", min: 0.01, max: 100,  unit: "/yr",
+      name: "Star formation rate",
+      status: "measured",
+      desc: "New stars born in the Milky Way each year.",
+      src: "1.65 \u00b1 0.19 M\u2609/yr (Licquia & Newman 2015) \u2248 3 stars/yr at a mean stellar mass near 0.5 M\u2609." },
+    { key: "fp", sym: "f", sub: "p", min: 1e-4, max: 1,    unit: "",
+      name: "Fraction of stars with planets",
+      status: "measured",
+      desc: "Planets turned out to be the rule, not the exception.",
+      src: "Microlensing gives \u22731 bound planet per star (Cassan et al. 2012); Kepler occurrence rates agree." },
+    { key: "ne", sym: "n", sub: "e", min: 1e-3, max: 10,   unit: "",
+      name: "Habitable planets per system",
+      status: "estimated",
+      desc: "Worlds per star where liquid water could persist \u2014 sensitive to how you draw the zone.",
+      src: "\u03b7\u2295 \u2248 0.4 (+0.5 / \u22120.2) for Sun-like stars, conservative habitable zone (Bryson et al. 2021)." },
+    { key: "fl", sym: "f", sub: "l", min: 1e-9, max: 1,    unit: "",
+      name: "Fraction where life appears",
+      status: "unknown",
+      desc: "Life began quickly on Earth, which hints at easy \u2014 but one sample proves nothing." },
+    { key: "fi", sym: "f", sub: "i", min: 1e-9, max: 1,    unit: "",
+      name: "Fraction that becomes intelligent",
+      status: "unknown",
+      desc: "Earth ran life for three billion years before anything built a radio." },
+    { key: "fc", sym: "f", sub: "c", min: 1e-6, max: 1,    unit: "",
+      name: "Fraction that broadcasts detectably",
+      status: "unknown",
+      desc: "Intelligence is not a signal. Something has to leak or aim outward for us to catch it." },
+    { key: "L",  sym: "L", sub: "",  min: 1,    max: 1e10, unit: "yr",
+      name: "Broadcast lifetime",
+      status: "unknown",
+      desc: "How long that window stays open. One sample, and we are about 100 years into it." }
+  ];
+
+  var SPOKEN = { "/yr": " stars per year", "yr": " years", "": "" };
+
+  var STATUS = {
+    measured:  "Measured",
+    estimated: "Estimated \u00b1",
+    unknown:   "No data"
+  };
+
+  // blurb is written as HTML: it is only ever assigned through innerHTML.
+  var PRESETS = [
+    // Measured terms at their observed values; the four unconstrained terms
+    // pinned at 1 (L at a conventional placeholder) so N reads as a ceiling.
+    { name: "Measured baseline", v: { R: 3,   fp: 1,    ne: 0.4,  fl: 1,   fi: 1,    fc: 1,    L: 1e4 },
+      blurb: "<strong>Measured baseline.</strong> The three terms astronomy has pinned down sit at their published values; the four nobody can constrain are pinned at 1. The N above is therefore a ceiling &mdash; the most the data alone will allow, before biology or history filters anything out." },
+
+    { name: "Drake, 1961",       v: { R: 1,   fp: 0.35, ne: 3,    fl: 1,   fi: 1,    fc: 0.15, L: 1e4 },
+      blurb: "<strong>Drake, 1961.</strong> What the eleven attendees at Green Bank argued their way to, with not one exoplanet yet detected. Their n<sub>e</sub> of 3 was a guess Kepler later cut by nearly an order of magnitude, and they took life and intelligence to follow wherever a habitable world allowed." },
+
+    { name: "Optimistic",        v: { R: 3,   fp: 1,    ne: 0.4,  fl: 0.9, fi: 0.5,  fc: 0.5,  L: 1e7 },
+      blurb: "<strong>Optimistic.</strong> Life and mind as near-inevitable given the chance, and broadcasts that persist ten million years. Close to Sagan's position: the hard part is surviving your own technology, and a society that manages it can last geological time." },
+
+    { name: "Rare Earth",        v: { R: 3,   fp: 1,    ne: 0.4,  fl: 0.5, fi: 1e-6, fc: 0.2,  L: 500 },
+      blurb: "<strong>Rare Earth.</strong> Ward and Brownlee's 2000 argument that microbes are common and complex life almost absent. Plate tectonics, a large moon, an outer gas giant and a quiet galactic orbit all had to coincide &mdash; so the whole weight falls on f<sub>i</sub>, here one in a million." }
+  ];
+
+  var CUSTOM_BLURB = "<strong>Custom.</strong> These dials no longer match any of the four presets. " +
+    "Whatever N reads above follows from your own assumptions &mdash; which is the only way the " +
+    "equation was ever really meant to be used.";
+
+  var STEPS = 1000;
+  var GALAXY_VOLUME = Math.PI * 50000 * 50000 * 1000; // cubic light years
+  var state = {};
+  var els = {};
+  var eqNums = {};
+
+  // -- Formatting ----------------------------------------
+  var SUPS = { "-": "\u207b", "0": "\u2070", "1": "\u00b9", "2": "\u00b2", "3": "\u00b3", "4": "\u2074",
+               "5": "\u2075", "6": "\u2076", "7": "\u2077", "8": "\u2078", "9": "\u2079" };
+
+  function sup(n) {
+    return String(n).split("").map(function (c) { return SUPS[c] || c; }).join("");
+  }
+
+  function trim(s) {
+    return s.indexOf(".") < 0 ? s : s.replace(/\.?0+$/, "");
+  }
+
+  // toPrecision flips to exponential once the exponent reaches the precision;
+  // for the readable middle of the range we always want plain digits back.
+  function plain(v, digits) {
+    var p = v.toPrecision(digits);
+    if (p.indexOf("e") >= 0) p = String(Number(p));
+    return trim(p);
+  }
+
+  // Compact display: plain digits in the readable middle, powers of ten outside it.
+  function fmt(v, digits) {
+    digits = digits || 3;
+    if (!isFinite(v)) return "\u2014";
+    if (v === 0) return "0";
+    if (v >= 1e-3 && v < 1e5) return plain(v, digits);
+    var parts = v.toExponential(digits - 1).split("e");
+    var mant = trim(parts[0]);
+    var exp = parseInt(parts[1], 10);
+    return (mant === "1" ? "10" : mant + " \u00d7 10") + sup(exp);
+  }
+
+  // Round-trippable text for the editable fields.
+  function fmtField(v) {
+    if (v >= 1e-3 && v < 1e6) return plain(v, 3);
+    var parts = v.toExponential(2).split("e");
+    return trim(parts[0]) + "e" + parseInt(parts[1], 10);
+  }
+
+  // -- Log slider mapping --------------------------------
+  function posToVal(f, pos) {
+    return f.min * Math.pow(f.max / f.min, pos / STEPS);
+  }
+  function valToPos(f, v) {
+    var c = Math.min(f.max, Math.max(f.min, v));
+    return Math.round(STEPS * Math.log(c / f.min) / Math.log(f.max / f.min));
+  }
+
+  function products() {
+    var out = [], running = 1;
+    for (var i = 0; i < FACTORS.length; i++) {
+      running *= state[FACTORS[i].key];
+      out.push(running);
+    }
+    return out;
+  }
+
+  // -- Build: hero equation ------------------------------
+  function buildEquation() {
+    var eq = document.getElementById("eq");
+    FACTORS.forEach(function (f, i) {
+      if (i > 0) {
+        var op = document.createElement("span");
+        op.className = "op";
+        op.textContent = "\u00d7";
+        eq.appendChild(op);
+      }
+      var b = document.createElement("button");
+      b.className = "term";
+      b.type = "button";
+      b.title = "Adjust " + f.name.toLowerCase();
+      b.innerHTML = '<span class="glyph">' + f.sym +
+        (f.sub ? "<sub>" + f.sub + "</sub>" : "") + '</span><span class="num"></span>';
+      b.addEventListener("click", function () {
+        var row = els[f.key].row;
+        row.scrollIntoView({ behavior: "smooth", block: "center" });
+        els[f.key].range.focus({ preventScroll: true });
+        row.classList.add("lit");
+        setTimeout(function () { row.classList.remove("lit"); }, 900);
+      });
+      eq.appendChild(b);
+      eqNums[f.key] = b.querySelector(".num");
+    });
+
+    var eqs = document.createElement("span");
+    eqs.className = "op eq";
+    eqs.textContent = "=";
+    eq.appendChild(eqs);
+
+    document.getElementById("eq-result").innerHTML =
+      '<span class="glyph" id="eq-n"></span><span class="num">civilizations</span>';
+
+    // Detect the moment the panel locks to the top edge: with a -1px top
+    // inset it can only be fully visible while it is still in normal flow.
+    var panel = document.querySelector(".equation");
+    if (window.IntersectionObserver) {
+      new IntersectionObserver(function (entries) {
+        panel.classList.toggle("stuck", entries[0].intersectionRatio < 1);
+      }, { threshold: [1], rootMargin: "-1px 0px 0px 0px" }).observe(panel);
+    }
+  }
+
+  // -- Build: presets ------------------------------------
+  function buildPresets() {
+    var host = document.getElementById("presets");
+    PRESETS.forEach(function (p) {
+      var b = document.createElement("button");
+      b.className = "chip";
+      b.type = "button";
+      b.textContent = p.name;
+      b.setAttribute("aria-pressed", "false");
+      b.addEventListener("click", function () {
+        FACTORS.forEach(function (f) { state[f.key] = p.v[f.key]; });
+        syncInputs();
+        render();
+      });
+      host.appendChild(b);
+    });
+  }
+
+  function markActivePreset() {
+    var chips = document.getElementById("presets").children;
+    var active = -1;
+    for (var i = 0; i < PRESETS.length; i++) {
+      var match = FACTORS.every(function (f) {
+        var a = state[f.key], b = PRESETS[i].v[f.key];
+        return Math.abs(Math.log10(a) - Math.log10(b)) < 0.02;
+      });
+      chips[i].setAttribute("aria-pressed", match ? "true" : "false");
+      if (match) active = i;
+    }
+    setStance(active < 0 ? CUSTOM_BLURB : PRESETS[active].blurb);
+  }
+
+  // Swap the standfirst to describe whichever stance is on the dials.
+  function setStance(html) {
+    var el = document.getElementById("stance");
+    if (el.innerHTML === html) return;
+    el.innerHTML = html;
+    el.classList.remove("swap");
+    void el.offsetWidth;
+    el.classList.add("swap");
+  }
+
+  // -- Build: factor controls ----------------------------
+  function buildFactors() {
+    var host = document.getElementById("factors");
+    FACTORS.forEach(function (f) {
+      var row = document.createElement("div");
+      row.className = "factor";
+      row.id = "f-" + f.key;
+
+      var symId = "lbl-" + f.key;
+      row.innerHTML =
+        '<div class="f-sym">' + f.sym + (f.sub ? "<sub>" + f.sub + "</sub>" : "") + "</div>" +
+        '<div class="f-meta"><span class="f-name" id="' + symId + '">' + f.name +
+        '<span class="badge ' + f.status + '">' + STATUS[f.status] + "</span></span>" +
+        '<span class="f-desc">' + f.desc + "</span>" +
+        (f.src ? '<span class="f-src">' + f.src + "</span>" : "") + "</div>" +
+        '<div class="f-val"><input type="text" inputmode="decimal" spellcheck="false"' +
+        ' aria-label="' + f.name + ' value"><span class="f-unit">' + f.unit + "</span></div>" +
+        '<div class="f-slider">' +
+        '<span class="f-tick min" aria-hidden="true">' + fmt(f.min, 1) + "</span>" +
+        '<input type="range" min="0" max="' + STEPS + '" step="1"' +
+        ' aria-labelledby="' + symId + '">' +
+        '<span class="f-tick max" aria-hidden="true">' + fmt(f.max, 1) + "</span></div>";
+
+      host.appendChild(row);
+
+      var range = row.querySelector('input[type="range"]');
+      var field = row.querySelector('input[type="text"]');
+
+      range.addEventListener("input", function () {
+        state[f.key] = posToVal(f, +range.value);
+        field.value = fmtField(state[f.key]);
+        render(f.key);
+      });
+
+      function commit() {
+        var parsed = parseFloat(field.value.replace(/[, ]/g, ""));
+        if (isFinite(parsed) && parsed > 0) {
+          state[f.key] = Math.min(f.max, Math.max(f.min, parsed));
+        }
+        field.value = fmtField(state[f.key]);
+        range.value = valToPos(f, state[f.key]);
+        render(f.key);
+      }
+      field.addEventListener("change", commit);
+      field.addEventListener("blur", commit);
+
+      els[f.key] = { row: row, range: range, field: field };
+    });
+  }
+
+  function syncInputs() {
+    FACTORS.forEach(function (f) {
+      els[f.key].range.value = valToPos(f, state[f.key]);
+      els[f.key].field.value = fmtField(state[f.key]);
+    });
+  }
+
+  // -- Render: cascade chart -----------------------------
+  function renderCascade(prods) {
+    var host = document.getElementById("cascade");
+    var logs = prods.map(function (v) { return Math.log10(v); });
+    var lo = Math.floor(Math.min.apply(null, logs.concat([0])));
+    var hi = Math.ceil(Math.max.apply(null, logs.concat([1])));
+    if (hi - lo < 4) hi = lo + 4;
+    var span = hi - lo;
+
+    // Thin the decade ticks to whatever the track can actually hold, so a
+    // narrow screen gets 10^0 / 10^4 / 10^8 rather than an unreadable smear.
+    var narrow = host.clientWidth < 480;
+    var trackPx = Math.max(80, host.clientWidth - (narrow ? 150 : 215));
+    var step = Math.max(1, Math.ceil(span / Math.max(3, Math.floor(trackPx / 58))));
+
+    var html = "";
+    FACTORS.forEach(function (f, i) {
+      var label = (i === 0 ? "" : "\u00d7 ") + f.sym + (f.sub ? "<sub>" + f.sub + "</sub>" : "");
+      var w = Math.max(0.3, Math.min(100, ((logs[i] - lo) / span) * 100));
+      var lines = "";
+      for (var d = lo; d <= hi; d += step) {
+        lines += '<div class="grid-line" style="left:' + (((d - lo) / span) * 100) + '%"></div>';
+      }
+      html += '<div class="crow' + (i === FACTORS.length - 1 ? " final" : "") + '">' +
+        '<div class="crow-label">' + label + "</div>" +
+        '<div class="track">' + lines + '<div class="bar" style="width:' + w + '%"></div></div>' +
+        '<div class="crow-val">' + fmt(prods[i], 2) + "</div></div>";
+    });
+
+    // Edge ticks align inward instead of centring, so the first one cannot
+    // collide with the axis label and the last cannot spill past the track.
+    var ticks = "";
+    for (var d = lo; d <= hi; d += step) {
+      var pct = ((d - lo) / span) * 100;
+      var shift = pct < 0.5 ? "none" : (pct > 99.5 ? "translateX(-100%)" : "translateX(-50%)");
+      ticks += '<span class="axis-tick" style="left:' + pct + "%;transform:" + shift +
+        '">10' + sup(d) + "</span>";
+    }
+    html += '<div class="axis"><span class="axis-name">Running total</span>' +
+      '<div class="axis-scale">' + ticks + "</div><span></span></div>";
+
+    host.innerHTML = html;
+  }
+
+  // -- Render: consequence tiles -------------------------
+  function renderStats(N) {
+    var host = document.getElementById("stats");
+    var tiles = [];
+
+    tiles.push({
+      label: "N \u2014 civilizations now broadcasting",
+      value: fmt(N, 3),
+      note: N < 1
+        ? "Fewer than one. On these numbers the Milky Way is silent and we are the anomaly."
+        : (N < 2 ? "Just us, statistically." : "Somewhere in a galaxy of ~100 billion stars.")
+    });
+
+    if (N >= 1) {
+      var d = Math.cbrt(GALAXY_VOLUME / N);
+      tiles.push({
+        label: "Distance to the nearest one",
+        value: fmt(d, 3) + " ly",
+        note: "Mean separation if they are spread evenly through the disk."
+      });
+      tiles.push({
+        label: "Round trip for a hello",
+        value: fmt(2 * d, 3) + " yr",
+        note: 2 * d > 2000
+          ? "Longer than recorded history. Detection, yes; conversation, no."
+          : "Short enough that someone alive at transmission could hear the reply."
+      });
+    } else {
+      tiles.push({
+        label: "Distance to the nearest one",
+        value: "\u2014",
+        note: "With N below one, the expected nearest neighbour lies outside the galaxy."
+      });
+      tiles.push({
+        label: "Stars per civilization",
+        value: fmt(1e11 / Math.max(N, 1e-30), 2),
+        note: "The Milky Way holds roughly 100 billion stars in total."
+      });
+    }
+
+    host.innerHTML = tiles.map(function (t) {
+      return '<div class="stat"><span class="stat-label">' + t.label + "</span>" +
+        '<span class="stat-value">' + t.value + "</span>" +
+        '<span class="stat-note">' + t.note + "</span></div>";
+    }).join("");
+  }
+
+  // -- Render --------------------------------------------
+  function render(changedKey) {
+    FACTORS.forEach(function (f) {
+      var c = els[f.key];
+      c.range.style.setProperty("--fill", (+c.range.value / STEPS).toFixed(4));
+      // The input's own 0-1000 position is meaningless aloud; announce the value.
+      c.range.setAttribute("aria-valuetext", fmtField(state[f.key]) + SPOKEN[f.unit]);
+      eqNums[f.key].innerHTML = fmt(state[f.key], 3);
+    });
+
+    if (changedKey) {
+      var n = eqNums[changedKey];
+      n.classList.remove("pulse");
+      void n.offsetWidth;
+      n.classList.add("pulse");
+    }
+
+    var prods = products();
+    var N = prods[prods.length - 1];
+    document.getElementById("eq-n").textContent = fmt(N, 3);
+    renderCascade(prods);
+    renderStats(N);
+    markActivePreset();
+  }
+
+  // -- Boot ----------------------------------------------
+  FACTORS.forEach(function (f) { state[f.key] = PRESETS[0].v[f.key]; });
+  buildEquation();
+  buildPresets();
+  buildFactors();
+  syncInputs();
+  render();
+})();
+</script>
