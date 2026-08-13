@@ -26,11 +26,48 @@
     --signal:  #0A6C67;
     --signal-soft: #0a6c6722;
     --flare:   #A9451A;
+    /* Cascade segments that pull the running total back down. Neutral on
+       purpose: the flare is spoken for by the result, and a second hot
+       colour would turn the chart into an argument between two accents. */
+    --shrink:  #8B9691;
     --shadow:  0 1px 2px rgba(18,26,25,.06), 0 8px 24px -16px rgba(18,26,25,.28);
 
     --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
     --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+    /* -- Small type ---------------------------------------
+       Every size below body sits on this scale so the phone
+       can raise the whole floor in one place. A desktop
+       reader is a foot or two from a large screen; a phone
+       reader is holding a small one at arm's length, and the
+       sizes that work at the first distance do not survive
+       the second.                                           */
+    --t-nano:   .5625rem;  /* badges                          */
+    --t-micro:  .625rem;   /* axis ticks, units, stat labels  */
+    --t-small:  .6875rem;  /* eyebrow, sources, colophon      */
+    --t-fine:   .75rem;    /* chips, term values              */
+    --t-detail: .8125rem;  /* descriptions, chart labels      */
+    --t-input:  .875rem;   /* the editable value fields       */
+    --t-body:   .9375rem;  /* secondary running text          */
   }
+  /* Raise the whole small-type floor on handheld screens. Keyed to the
+     pointer as well as the width, on the same reasoning as the hit areas
+     below: a phone in landscape is ~850px wide and still held at arm's
+     length. Nothing here drops below 10px, and the editable fields reach
+     16px, which is also the threshold under which iOS zooms the page in
+     when a field takes focus. */
+  @media (pointer: coarse), (max-width: 640px) {
+    :root {
+      --t-nano:   .625rem;
+      --t-micro:  .6875rem;
+      --t-small:  .75rem;
+      --t-fine:   .8125rem;
+      --t-detail: .9375rem;
+      --t-input:  1rem;
+      --t-body:   1rem;
+    }
+  }
+
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
       --paper:   #0C110F;
@@ -44,6 +81,7 @@
       --signal:  #4FD3C0;
       --signal-soft: #4fd3c022;
       --flare:   #F08A52;
+      --shrink:  #5C6A66;
       --shadow:  0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.9);
     }
   }
@@ -59,6 +97,7 @@
     --signal:  #4FD3C0;
     --signal-soft: #4fd3c022;
     --flare:   #F08A52;
+    --shrink:  #5C6A66;
     --shadow:  0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.9);
   }
 
@@ -71,6 +110,10 @@
     font-size: 16px;
     line-height: 1.55;
     -webkit-font-smoothing: antialiased;
+    /* Size the text ourselves rather than letting mobile Safari inflate
+       it by its own ratio when the page turns landscape. */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
     margin: 0;
   }
   .wrap {
@@ -86,7 +129,7 @@
 
   .eyebrow {
     font-family: var(--mono);
-    font-size: .6875rem;
+    font-size: var(--t-small);
     letter-spacing: .18em;
     text-transform: uppercase;
     color: var(--ink-3);
@@ -181,10 +224,25 @@
   }
   .term .num {
     font-family: var(--mono);
-    font-size: .75rem;
+    font-size: var(--t-fine);
     color: var(--signal);
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
+  }
+  /* The page's argument is that three of these seven are measurements and
+     four are guesses. The badges say so far down the page; this says it in
+     the equation. Line style carries it, not colour -- four hot underlines
+     up here would fight the result for the eye. */
+  .term::after {
+    content: "";
+    width: 1.5em;
+    height: 0;
+    border-top: 2px solid var(--signal);
+  }
+  .term.cert-estimated::after { border-top-color: var(--ink-3); }
+  .term.cert-unknown::after {
+    border-top-style: dotted;
+    border-top-color: var(--ink-3);
   }
   .op {
     font-family: var(--mono);
@@ -211,7 +269,7 @@
   }
   .result .num {
     font-family: var(--mono);
-    font-size: .6875rem;
+    font-size: var(--t-small);
     letter-spacing: .12em;
     text-transform: uppercase;
     color: var(--ink-3);
@@ -225,17 +283,38 @@
   }
 
   /* -- Section scaffolding -------------------------------- */
-  .section { display: flex; flex-direction: column; gap: 1.25rem; }
-  .section-head { display: flex; flex-direction: column; gap: .3rem; }
-  .section-head h2 {
-    font-size: 1.0625rem;
-    font-weight: 600;
-    letter-spacing: -.01em;
+  /* A hairline above each section supplies the tier the type scale was
+     missing: h1 is ~3.3rem and h2 barely above body size, so without a
+     structural mark the sections read as more paragraphs. */
+  .section {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    border-top: 1px solid var(--rule);
+    padding-top: 1.6rem;
   }
-  .section-head p { color: var(--ink-2); font-size: .9375rem; max-width: 60ch; }
-  /* Reserve most of the tallest blurb's height so swapping stance
-     doesn't shove the controls up and down the page. */
-  #stance { min-height: 6.2em; }
+  .section-head { display: flex; flex-direction: column; gap: .4rem; }
+  .section-head h2 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    letter-spacing: -.015em;
+    line-height: 1.2;
+  }
+  .section-head p { color: var(--ink-2); font-size: var(--t-body); max-width: 60ch; }
+
+  /* The stance blurb describes whichever preset is active, so it sits
+     below the chips it belongs to, not above them. Styled here rather
+     than inherited from .section-head p now that it lives outside. */
+  #stance {
+    color: var(--ink-2);
+    font-size: var(--t-body);
+    max-width: 60ch;
+    /* Reserve most of the tallest blurb's height so swapping stance
+       doesn't shove the controls up and down the page. */
+    min-height: 5.4em;
+    border-left: 2px solid var(--rule);
+    padding-left: 1rem;
+  }
   #stance strong { color: var(--ink); font-weight: 600; }
   #stance sub { font-size: .72em; }
   @keyframes swap { from { opacity: .25; } to { opacity: 1; } }
@@ -245,7 +324,7 @@
   .presets { display: flex; flex-wrap: wrap; gap: .5rem; }
   .chip {
     font-family: var(--mono);
-    font-size: .75rem;
+    font-size: var(--t-fine);
     letter-spacing: .04em;
     padding: .42rem .7rem;
     border: 1px solid var(--rule);
@@ -292,20 +371,20 @@
   .f-sym sub { font-size: .55em; color: var(--ink-2); }
   .f-meta { display: flex; flex-direction: column; gap: .1rem; min-width: 0; }
   .f-name {
-    font-size: .9375rem; font-weight: 600; letter-spacing: -.005em;
+    font-size: var(--t-body); font-weight: 600; letter-spacing: -.005em;
     display: flex; align-items: center; gap: .5rem; flex-wrap: wrap;
   }
-  .f-desc { font-size: .8125rem; color: var(--ink-2); line-height: 1.45; }
+  .f-desc { font-size: var(--t-detail); color: var(--ink-2); line-height: 1.45; }
   .f-src {
     font-family: var(--mono);
-    font-size: .6875rem;
+    font-size: var(--t-small);
     line-height: 1.5;
     color: var(--ink-3);
     margin-top: .2rem;
   }
   .badge {
     font-family: var(--mono);
-    font-size: .5625rem;
+    font-size: var(--t-nano);
     font-weight: 400;
     letter-spacing: .12em;
     text-transform: uppercase;
@@ -321,7 +400,7 @@
   .f-val input {
     width: 5.4rem;
     font-family: var(--mono);
-    font-size: .875rem;
+    font-size: var(--t-input);
     font-variant-numeric: tabular-nums;
     text-align: right;
     padding: .28rem .4rem;
@@ -332,7 +411,7 @@
   }
   .f-unit {
     font-family: var(--mono);
-    font-size: .625rem;
+    font-size: var(--t-micro);
     letter-spacing: .06em;
     text-transform: uppercase;
     color: var(--ink-3);
@@ -349,7 +428,7 @@
   }
   .f-tick {
     font-family: var(--mono);
-    font-size: .625rem;
+    font-size: var(--t-micro);
     line-height: 1;
     color: var(--ink-3);
     font-variant-numeric: tabular-nums;
@@ -414,7 +493,7 @@
   }
   .crow-label {
     font-family: var(--mono);
-    font-size: .8125rem;
+    font-size: var(--t-detail);
     color: var(--ink-2);
     white-space: nowrap;
   }
@@ -429,20 +508,34 @@
     width: 1px;
     background: var(--rule-2);
   }
-  .bar {
+  /* Each row is the span the term moves the running total across, not a
+     bar from the axis origin -- so the length of a segment is the size of
+     that assumption's effect, which is the only thing this chart is for. */
+  .seg {
     position: absolute;
     top: 5px;
     height: 12px;
-    left: 0;
+    border-radius: 1px;
     background: var(--signal);
-    opacity: .55;
-    border-radius: 0 1px 1px 0;
   }
-  .crow.final .bar { opacity: 1; background: var(--flare); }
+  /* Terms below 1 divide: the total travels backwards. Neutral, so a
+     retreat never competes with the result for attention. */
+  .seg.shrink { background: var(--shrink); }
+  /* A term of exactly 1 changes nothing. Show the standstill rather than
+     rendering a zero-width bar that reads as a failure to draw. */
+  .seg.flat { width: 2px; background: var(--ink-3); }
+  .crow.final .seg { background: var(--flare); }
   .crow.final .crow-label, .crow.final .crow-val { color: var(--ink); font-weight: 600; }
+  /* N = 1: the line between "someone is broadcasting" and "no one is". */
+  .threshold {
+    position: absolute;
+    top: -2px; bottom: -2px;
+    width: 0;
+    border-left: 1px dashed var(--ink-3);
+  }
   .crow-val {
     font-family: var(--mono);
-    font-size: .8125rem;
+    font-size: var(--t-detail);
     font-variant-numeric: tabular-nums;
     text-align: right;
     color: var(--ink-2);
@@ -462,16 +555,35 @@
     position: absolute;
     top: 0;
     font-family: var(--mono);
-    font-size: .625rem;
+    font-size: var(--t-micro);
     color: var(--ink-3);
     white-space: nowrap;
   }
   .axis-name {
     font-family: var(--mono);
-    font-size: .625rem;
-    letter-spacing: .12em;
+    font-size: var(--t-micro);
+    letter-spacing: .08em;
     text-transform: uppercase;
     color: var(--ink-3);
+    align-self: center;
+  }
+  /* Legend for the dashed rule, parked in the value column so it can
+     never land on top of a decade tick. */
+  .axis-note {
+    font-family: var(--mono);
+    font-size: var(--t-micro);
+    color: var(--ink-3);
+    text-align: right;
+    white-space: nowrap;
+    align-self: center;
+  }
+  .axis-note i {
+    font-style: normal;
+    border-top: 1px dashed var(--ink-3);
+    display: inline-block;
+    width: .9rem;
+    vertical-align: middle;
+    margin-right: .3rem;
   }
 
   /* -- Readouts ------------------------------------------- */
@@ -493,7 +605,7 @@
   }
   .stat-label {
     font-family: var(--mono);
-    font-size: .625rem;
+    font-size: var(--t-micro);
     letter-spacing: .14em;
     text-transform: uppercase;
     color: var(--ink-3);
@@ -506,7 +618,7 @@
     letter-spacing: -.02em;
   }
   .stat:first-child .stat-value { color: var(--flare); }
-  .stat-note { font-size: .8125rem; color: var(--ink-2); line-height: 1.4; }
+  .stat-note { font-size: var(--t-detail); color: var(--ink-2); line-height: 1.4; }
 
   /* -- Closing note --------------------------------------- */
   .note {
@@ -517,12 +629,12 @@
     gap: .7rem;
     max-width: 64ch;
     color: var(--ink-2);
-    font-size: .9375rem;
+    font-size: var(--t-body);
   }
   .note strong { color: var(--ink); font-weight: 600; }
   .colophon {
     font-family: var(--mono);
-    font-size: .6875rem;
+    font-size: var(--t-small);
     letter-spacing: .06em;
     color: var(--ink-3);
     border-top: 1px solid var(--rule);
@@ -576,11 +688,14 @@
     .cascade { padding: 1.1rem .85rem .9rem; }
     .crow, .axis {
       min-width: 0;
-      grid-template-columns: 3.2rem 1fr 4.9rem;
+      /* Widened to match the larger chart type below: the value column has
+         to hold something like 6 x 10^-7 without wrapping. */
+      grid-template-columns: 3.4rem 1fr 5.4rem;
       gap: 0 .55rem;
     }
-    .crow-label { font-size: .75rem; }
-    .crow-val { font-size: .6875rem; }
+    /* One step down from the descriptions -- the track needs the room --
+       but still on the raised scale rather than back under it. */
+    .crow-label, .crow-val { font-size: var(--t-fine); }
 
     .factor {
       grid-template-columns: 2.6rem 1fr;
@@ -608,9 +723,9 @@
     <div class="section-head">
       <h2>Starting points</h2>
       <p>Four sets of assumptions, all argued in print by serious people, disagreeing by a factor of ten billion.</p>
-      <p id="stance" aria-live="polite"></p>
     </div>
     <div class="presets" id="presets"></div>
+    <p id="stance" aria-live="polite"></p>
     <div class="factors" id="factors"></div>
   </section>
 
@@ -780,9 +895,10 @@
         eq.appendChild(op);
       }
       var b = document.createElement("button");
-      b.className = "term";
+      b.className = "term cert-" + f.status;
       b.type = "button";
-      b.title = "Adjust " + f.name.toLowerCase();
+      b.title = f.name + " \u2014 " + STATUS[f.status].replace(" \u00b1", "") +
+        ". Click to adjust.";
       b.innerHTML = '<span class="glyph">' + f.sym +
         (f.sub ? "<sub>" + f.sub + "</sub>" : "") + '</span><span class="num"></span>';
       b.addEventListener("click", function () {
@@ -920,20 +1036,37 @@
     // Thin the decade ticks to whatever the track can actually hold, so a
     // narrow screen gets 10^0 / 10^4 / 10^8 rather than an unreadable smear.
     var narrow = host.clientWidth < 480;
-    var trackPx = Math.max(80, host.clientWidth - (narrow ? 150 : 215));
+    var trackPx = Math.max(80, host.clientWidth - (narrow ? 160 : 215));
     var step = Math.max(1, Math.ceil(span / Math.max(3, Math.floor(trackPx / 58))));
+
+    // Position of a log value as a percentage across the track.
+    function pos(l) {
+      return ((Math.min(hi, Math.max(lo, l)) - lo) / span) * 100;
+    }
 
     var html = "";
     FACTORS.forEach(function (f, i) {
       var label = (i === 0 ? "" : "\u00d7 ") + f.sym + (f.sub ? "<sub>" + f.sub + "</sub>" : "");
-      var w = Math.max(0.3, Math.min(100, ((logs[i] - lo) / span) * 100));
+      // Every row starts where the previous one ended; the first starts at
+      // a single civilization, so R* reads against the same origin as N.
+      var from = i === 0 ? 0 : logs[i - 1];
+      var to = logs[i];
+      var moved = Math.abs(to - from) > 1e-9;
+      var kind = moved ? (to > from ? "grow" : "shrink") : "flat";
+      var seg = moved
+        ? '<div class="seg ' + kind + '" style="left:' + pos(Math.min(from, to)) +
+          "%;width:" + (pos(Math.max(from, to)) - pos(Math.min(from, to))) + '%"></div>'
+        : '<div class="seg flat" style="left:' + pos(to) + '%"></div>';
+
       var lines = "";
       for (var d = lo; d <= hi; d += step) {
-        lines += '<div class="grid-line" style="left:' + (((d - lo) / span) * 100) + '%"></div>';
+        lines += '<div class="grid-line" style="left:' + pos(d) + '%"></div>';
       }
+      lines += '<div class="threshold" style="left:' + pos(0) + '%"></div>';
+
       html += '<div class="crow' + (i === FACTORS.length - 1 ? " final" : "") + '">' +
         '<div class="crow-label">' + label + "</div>" +
-        '<div class="track">' + lines + '<div class="bar" style="width:' + w + '%"></div></div>' +
+        '<div class="track">' + lines + seg + "</div>" +
         '<div class="crow-val">' + fmt(prods[i], 2) + "</div></div>";
     });
 
@@ -941,13 +1074,14 @@
     // collide with the axis label and the last cannot spill past the track.
     var ticks = "";
     for (var d = lo; d <= hi; d += step) {
-      var pct = ((d - lo) / span) * 100;
+      var pct = pos(d);
       var shift = pct < 0.5 ? "none" : (pct > 99.5 ? "translateX(-100%)" : "translateX(-50%)");
       ticks += '<span class="axis-tick" style="left:' + pct + "%;transform:" + shift +
         '">10' + sup(d) + "</span>";
     }
-    html += '<div class="axis"><span class="axis-name">Running total</span>' +
-      '<div class="axis-scale">' + ticks + "</div><span></span></div>";
+    html += '<div class="axis"><span class="axis-name">Total</span>' +
+      '<div class="axis-scale">' + ticks + "</div>" +
+      '<span class="axis-note"><i></i>N = 1</span></div>';
 
     host.innerHTML = html;
   }

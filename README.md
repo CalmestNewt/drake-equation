@@ -30,12 +30,18 @@ repo root via GitHub Pages, so every push to `main` redeploys the live site.
 
 - **Seven log-scaled dials**, one per term. Each also takes direct numeric entry,
   including scientific notation (`1e-5`).
-- **A cascade chart** showing the running product after each term on a logarithmic
-  axis — which makes it visible that a single assumption usually dominates the result.
-  Below, the "Optimistic" preset in dark theme: six terms hold the total near 1, and
-  `L` alone carries it to 2.7 million.
+- **Certainty marked in the equation itself.** Each term is underlined by how well it
+  is known — solid for measured, solid grey for estimated, dotted for no data — so the
+  three-measurements-and-four-guesses shape of the problem is visible in the headline
+  figure, not just in the table below it.
+- **A cascade chart** plotting the running product on a logarithmic axis. Each row spans
+  only the distance its term moves the total, so the length of a bar is the size of that
+  assumption's effect: terms above 1 push right, terms below 1 pull back in grey, and a
+  term of exactly 1 draws a standstill tick. A dashed rule marks N = 1 — the line between
+  someone broadcasting and no one. Below, the "Optimistic" preset in dark theme: six
+  terms hold the total near 1, and `L` alone carries it to 2.7 million.
 
-  ![The cascade chart in dark theme](docs/cascade-dark.png)
+  ![The cascade chart in dark theme, showing each term's contribution as a segment and a dashed line at N = 1](docs/cascade-dark.png)
 
 - **Consequence readouts**: N, the mean distance to the nearest civilization, and the
   round-trip time for a signal.
@@ -67,12 +73,17 @@ Vanilla JavaScript, no dependencies, no network requests. A few things that are
 deliberate rather than accidental:
 
 - **The source is pure ASCII.** Non-ASCII characters are written as HTML entities in the
-  markup and `\uXXXX` escapes in the script, so the page renders correctly even when a
-  host serves it without a charset declaration.
+  markup and `\uXXXX` escapes in the script, so the page survives being served without a
+  charset declaration. The document declares `utf-8` as well; the escaping is the belt to
+  that pair of braces.
 - **Themes are token-only.** The bare `:root` block defines the complete light palette;
   dark is redefined twice — under `prefers-color-scheme` (guarded against an explicit
   light choice) and under `[data-theme="dark"]` — so all three viewer states resolve.
   No color is defined solely inside a media or `[data-theme]` block.
+- **Every size below body text sits on one small-type scale** (`--t-nano` through
+  `--t-body`), which the handheld breakpoint redefines in a single block rather than
+  overriding sizes rule by rule. Nothing drops below 10px there, and the editable fields
+  reach 16px — the threshold under which iOS zooms the page in on focus.
 - **No `vh` units**, so a mobile URL bar collapsing cannot reflow the layout.
 - The sticky equation panel turns itself off below 460px of viewport height, where it
   would cost too much of a short screen.
