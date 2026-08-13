@@ -2,6 +2,8 @@
 
 An interactive calculator for the Drake equation, built as a single self-contained HTML file.
 
+**Live: [calmestnewt.github.io/drake-equation](https://calmestnewt.github.io/drake-equation/)**
+
 ```
 N = R∗ · f_p · n_e · f_l · f_i · f_c · L
 ```
@@ -19,7 +21,8 @@ python3 -m http.server 8000
 ```
 
 Since the whole site is one static file, `index.html` can be deployed to GitHub Pages,
-Netlify, S3, or any static host by copying it as-is.
+Netlify, S3, or any static host by copying it as-is. This repository serves `main` at the
+repo root via GitHub Pages, so every push to `main` redeploys the live site.
 
 ## What it does
 
