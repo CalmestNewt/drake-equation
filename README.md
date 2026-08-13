@@ -69,3 +69,10 @@ deliberate rather than accidental:
 - **No `vh` units**, so a mobile URL bar collapsing cannot reflow the layout.
 - The sticky equation panel turns itself off below 460px of viewport height, where it
   would cost too much of a short screen.
+
+## License
+
+[MIT](LICENSE) © 2026 CalmestNewt
+
+The cited research (Licquia & Newman 2015, Cassan et al. 2012, Bryson et al. 2021) is
+the work of its respective authors and is referenced here, not redistributed.
